@@ -54,12 +54,22 @@ export default function InventarisPage() {
     if (!user) return;
     
     try {
-      const { data, error } = await supabase
+      // Try with soft-delete filter first
+      let { data, error } = await supabase
         .from('inventaris')
         .select('*')
+        .is('deleted_at', null)
         .order('created_at', { ascending: false });
-      if (error) throw error;
-      setInventaris(data as Inventaris[]);
+      if (error) {
+        console.warn('fetchInventaris: falling back without deleted_at filter:', (error as any)?.message || error);
+        const retry = await supabase
+          .from('inventaris')
+          .select('*')
+          .order('created_at', { ascending: false });
+        if (retry.error) throw retry.error;
+        data = retry.data;
+      }
+      setInventaris((data || []) as Inventaris[]);
     } catch (error) {
       console.error('Error fetching inventaris:', error);
     } finally {
@@ -120,6 +130,22 @@ export default function InventarisPage() {
       keterangan: item.keterangan || ''
     });
     setShowModal(true);
+  };
+
+  const handleDelete = async (item: Inventaris) => {
+    const ok = window.confirm(`Hapus item "${item.nama_barang}"? Tindakan ini tidak bisa dibatalkan.`);
+    if (!ok) return;
+    try {
+      const { error } = await supabase
+        .from('inventaris')
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', item.id);
+      if (error) throw error;
+      await fetchInventaris();
+    } catch (err) {
+      console.error('Error deleting inventaris:', err);
+      alert('Gagal menghapus data inventaris. Coba lagi atau hubungi admin.');
+    }
   };
 
   const resetForm = () => {
@@ -331,7 +357,12 @@ export default function InventarisPage() {
                       >
                         <Edit className="w-4 h-4" />
                       </button>
-                      <button className="p-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded">
+                      <button
+                        className="p-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded"
+                        onClick={() => handleDelete(item)}
+                        aria-label="Hapus"
+                        title="Hapus"
+                      >
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>

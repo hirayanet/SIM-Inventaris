@@ -440,6 +440,9 @@ export default function LaporanPage() {
                     Stok
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Satuan
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                     Lokasi
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
@@ -461,6 +464,9 @@ export default function LaporanPage() {
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-900">
                       {item.jumlah}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-900">
+                      {(item as any).satuan || '-'}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-500">
                       {item.lokasi}

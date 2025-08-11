@@ -137,6 +137,7 @@ export const useReportExport = () => {
         const medicineData = data.obat.slice(0, 50).map(item => [
           item.nama_obat,
           item.jumlah.toString(),
+          (item as any).satuan || '-',
           item.lokasi,
           item.batas_minimal.toString(),
           item.tanggal_kadaluarsa ? new Date(item.tanggal_kadaluarsa).toLocaleDateString('id-ID') : '-',
@@ -146,7 +147,7 @@ export const useReportExport = () => {
         
         autoTable(doc, {
           startY: yPosition,
-          head: [['Nama Obat', 'Stok', 'Lokasi', 'Batas Min', 'Kadaluarsa', 'Status', 'Tanggal']],
+          head: [['Nama Obat', 'Stok', 'Satuan', 'Lokasi', 'Batas Min', 'Kadaluarsa', 'Status', 'Tanggal']],
           body: medicineData,
           theme: 'striped',
           headStyles: { fillColor: [239, 68, 68] },
@@ -264,6 +265,7 @@ export const useReportExport = () => {
           return {
             'Nama Obat': item.nama_obat,
             'Stok': item.jumlah,
+            'Satuan': (item as any).satuan || '',
             'Lokasi': item.lokasi,
             'Batas Minimal': item.batas_minimal,
             'Tanggal Kadaluarsa': item.tanggal_kadaluarsa ? new Date(item.tanggal_kadaluarsa).toLocaleDateString('id-ID') : '',

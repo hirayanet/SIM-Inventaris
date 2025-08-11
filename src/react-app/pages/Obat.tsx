@@ -26,6 +26,7 @@ export default function ObatPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterLokasi, setFilterLokasi] = useState<string>('');
   const [showLowStock, setShowLowStock] = useState(false);
+  const [satuanOptions, setSatuanOptions] = useState<string[]>(['pcs','botol','tablet','strip','box','roll']);
 
   // Form state
   const getUserDefaultLocation = (): Lokasi => {
@@ -43,6 +44,7 @@ export default function ObatPage() {
     nama_obat: '',
     jumlah: 0,
     lokasi: getUserDefaultLocation(),
+    satuan: 'pcs',
     tanggal_kadaluarsa: '',
     batas_minimal: 5,
     keterangan: ''
@@ -57,18 +59,47 @@ export default function ObatPage() {
   useEffect(() => {
     fetchObat();
     fetchRiwayat();
+    fetchSatuan();
   }, [user]);
+
+  const fetchSatuan = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('master_satuan')
+        .select('nama, is_active')
+        .eq('is_active', true)
+        .order('nama', { ascending: true });
+      if (error) throw error;
+      const list = (data || [])
+        .map((r: any) => (r?.nama || '').toString().trim())
+        .filter((v: string) => v.length > 0);
+      if (list.length > 0) setSatuanOptions(list);
+    } catch (err) {
+      console.warn('fetchSatuan failed, using defaults:', err);
+    }
+  };
 
   const fetchObat = async () => {
     if (!user) return;
     
     try {
-      const { data, error } = await supabase
+      // Try with soft-delete filter first
+      let { data, error } = await supabase
         .from('obat')
         .select('*')
+        .is('deleted_at', null)
         .order('created_at', { ascending: false });
-      if (error) throw error;
-      setObat(data as Obat[]);
+      if (error) {
+        // If column deleted_at doesn't exist yet, retry without filter
+        console.warn('fetchObat: falling back without deleted_at filter:', error?.message || error);
+        const retry = await supabase
+          .from('obat')
+          .select('*')
+          .order('created_at', { ascending: false });
+        if (retry.error) throw retry.error;
+        data = retry.data;
+      }
+      setObat((data || []) as Obat[]);
     } catch (error) {
       console.error('Error fetching obat:', error);
     } finally {
@@ -102,6 +133,7 @@ export default function ObatPage() {
             nama_obat: formData.nama_obat,
             jumlah: formData.jumlah,
             lokasi: formData.lokasi,
+            satuan: formData.satuan || null,
             tanggal_kadaluarsa: formData.tanggal_kadaluarsa || null,
             batas_minimal: formData.batas_minimal,
             keterangan: formData.keterangan || null,
@@ -116,6 +148,7 @@ export default function ObatPage() {
               nama_obat: formData.nama_obat,
               jumlah: formData.jumlah,
               lokasi: formData.lokasi,
+              satuan: formData.satuan || null,
               tanggal_kadaluarsa: formData.tanggal_kadaluarsa || null,
               batas_minimal: formData.batas_minimal,
               keterangan: formData.keterangan || null,
@@ -180,10 +213,16 @@ export default function ObatPage() {
       nama_obat: item.nama_obat,
       jumlah: item.jumlah,
       lokasi: item.lokasi,
+      satuan: (item as any).satuan || 'pcs',
       tanggal_kadaluarsa: item.tanggal_kadaluarsa ? item.tanggal_kadaluarsa.split('T')[0] : '',
       batas_minimal: item.batas_minimal,
       keterangan: item.keterangan || ''
     });
+    // ensure current satuan exists in options for edit view
+    const current = (item as any).satuan;
+    if (current && !satuanOptions.includes(current)) {
+      setSatuanOptions(prev => [...prev, current]);
+    }
     setShowModal(true);
   };
 
@@ -193,11 +232,28 @@ export default function ObatPage() {
     setShowUsageModal(true);
   };
 
+  const handleDelete = async (item: Obat) => {
+    const ok = window.confirm(`Hapus obat "${item.nama_obat}"? Tindakan ini tidak bisa dibatalkan.`);
+    if (!ok) return;
+    try {
+      const { error } = await supabase
+        .from('obat')
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', item.id);
+      if (error) throw error;
+      await fetchObat();
+    } catch (err) {
+      console.error('Error deleting obat:', err);
+      alert('Gagal menghapus data obat. Coba lagi atau hubungi admin.');
+    }
+  };
+
   const resetForm = () => {
     setFormData({
       nama_obat: '',
       jumlah: 0,
       lokasi: getUserDefaultLocation(),
+      satuan: 'pcs',
       tanggal_kadaluarsa: '',
       batas_minimal: 5,
       keterangan: ''
@@ -324,6 +380,9 @@ export default function ObatPage() {
                   Stok
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Satuan
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Lokasi
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -363,6 +422,9 @@ export default function ObatPage() {
                         <AlertTriangle className="w-4 h-4 text-red-500" />
                       )}
                     </div>
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-900">
+                    {(item as any).satuan || '-'}
                   </td>
                   <td className="px-6 py-4">
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
@@ -412,7 +474,12 @@ export default function ObatPage() {
                     </div>
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-500">
-                    {new Date(item.tanggal_input).toLocaleDateString('id-ID')}
+                    {(() => {
+                      const src = (item as any).tanggal_input || (item as any).created_at || (item as any).updated_at;
+                      if (!src) return '-';
+                      const d = new Date(src);
+                      return isNaN(d.getTime()) ? '-' : d.toLocaleDateString('id-ID');
+                    })()}
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center space-x-2">
@@ -430,7 +497,12 @@ export default function ObatPage() {
                       >
                         <Edit className="w-4 h-4" />
                       </button>
-                      <button className="p-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded" title="Hapus">
+                      <button
+                        className="p-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded"
+                        onClick={() => handleDelete(item)}
+                        aria-label="Hapus"
+                        title="Hapus"
+                      >
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
@@ -510,6 +582,24 @@ export default function ObatPage() {
                     <p className="text-xs text-gray-500 mt-1">Lokasi otomatis berdasarkan role Anda</p>
                   </div>
                 )}
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Satuan
+                  </label>
+                  <select
+                    value={formData.satuan}
+                    onChange={(e) => setFormData({...formData, satuan: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="pcs">pcs</option>
+                    <option value="botol">botol</option>
+                    <option value="tablet">tablet</option>
+                    <option value="strip">strip</option>
+                    <option value="box">box</option>
+                    <option value="roll">roll</option>
+                  </select>
+                </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">

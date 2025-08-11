@@ -48,6 +48,7 @@ export const ObatSchema = z.object({
   lokasi: LokasiSchema,
   tanggal_input: z.string(),
   tanggal_kadaluarsa: z.string().nullable(),
+  satuan: z.string().nullable().optional(),
   keterangan: z.string().nullable(),
   batas_minimal: z.number(),
   created_by_user_id: z.string().nullable(),
