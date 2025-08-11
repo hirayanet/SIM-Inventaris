@@ -1,0 +1,483 @@
+import { useState, useEffect } from 'react';
+import { useAuth } from '@/react-app/hooks/useAuth';
+import { Inventaris, Kategori, Lokasi, Kondisi } from '@/shared/types';
+import { supabase } from '@/lib/supabase';
+import { 
+  Plus, 
+  Search, 
+  Filter, 
+  Edit, 
+  Trash2, 
+  Package,
+  AlertTriangle,
+  CheckCircle,
+  XCircle
+} from 'lucide-react';
+
+export default function InventarisPage() {
+  const { user } = useAuth();
+  const [inventaris, setInventaris] = useState<Inventaris[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [editingItem, setEditingItem] = useState<Inventaris | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterKategori, setFilterKategori] = useState<string>('');
+  const [filterLokasi, setFilterLokasi] = useState<string>('');
+  const [filterKondisi, setFilterKondisi] = useState<string>('');
+
+  // Form state
+  const getUserDefaultLocation = (): Lokasi => {
+    if (!user) return 'PAUD';
+    switch (user.role) {
+      case 'operator_paud': return 'PAUD';
+      case 'operator_tk': return 'TK';
+      case 'operator_sd': return 'SD';
+      case 'operator_smp': return 'SMP';
+      default: return 'PAUD';
+    }
+  };
+
+  const [formData, setFormData] = useState({
+    nama_barang: '',
+    kategori: 'Peralatan' as Kategori,
+    jumlah: 0,
+    lokasi: getUserDefaultLocation(),
+    kondisi: 'Baik' as Kondisi,
+    keterangan: ''
+  });
+
+  useEffect(() => {
+    fetchInventaris();
+  }, [user]);
+
+  const fetchInventaris = async () => {
+    if (!user) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('inventaris')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      setInventaris(data as Inventaris[]);
+    } catch (error) {
+      console.error('Error fetching inventaris:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    try {
+      if (editingItem) {
+        const { error } = await supabase
+          .from('inventaris')
+          .update({
+            nama_barang: formData.nama_barang,
+            kategori: formData.kategori,
+            jumlah: formData.jumlah,
+            lokasi: formData.lokasi,
+            kondisi: formData.kondisi,
+            keterangan: formData.keterangan || null,
+          })
+          .eq('id', editingItem.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('inventaris')
+          .insert([
+            {
+              nama_barang: formData.nama_barang,
+              kategori: formData.kategori,
+              jumlah: formData.jumlah,
+              lokasi: formData.lokasi,
+              kondisi: formData.kondisi,
+              keterangan: formData.keterangan || null,
+              created_by_user_id: user?.id || null,
+            },
+          ]);
+        if (error) throw error;
+      }
+
+      await fetchInventaris();
+      setShowModal(false);
+      resetForm();
+    } catch (error) {
+      console.error('Error saving inventaris:', error);
+    }
+  };
+
+  const handleEdit = (item: Inventaris) => {
+    setEditingItem(item);
+    setFormData({
+      nama_barang: item.nama_barang,
+      kategori: item.kategori,
+      jumlah: item.jumlah,
+      lokasi: item.lokasi,
+      kondisi: item.kondisi,
+      keterangan: item.keterangan || ''
+    });
+    setShowModal(true);
+  };
+
+  const resetForm = () => {
+    setFormData({
+      nama_barang: '',
+      kategori: 'Peralatan',
+      jumlah: 0,
+      lokasi: getUserDefaultLocation(),
+      kondisi: 'Baik',
+      keterangan: ''
+    });
+    setEditingItem(null);
+  };
+
+  const filteredInventaris = inventaris.filter(item => {
+    const matchesSearch = item.nama_barang.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         item.keterangan?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesKategori = !filterKategori || item.kategori === filterKategori;
+    const matchesLokasi = !filterLokasi || item.lokasi === filterLokasi;
+    const matchesKondisi = !filterKondisi || item.kondisi === filterKondisi;
+    
+    return matchesSearch && matchesKategori && matchesLokasi && matchesKondisi;
+  });
+
+  const getKondisiIcon = (kondisi: string) => {
+    switch (kondisi) {
+      case 'Baik':
+        return <CheckCircle className="w-4 h-4 text-green-500" />;
+      case 'Rusak Ringan':
+        return <AlertTriangle className="w-4 h-4 text-yellow-500" />;
+      case 'Rusak Berat':
+        return <XCircle className="w-4 h-4 text-red-500" />;
+      default:
+        return <Package className="w-4 h-4 text-gray-500" />;
+    }
+  };
+
+  const getKondisiColor = (kondisi: string) => {
+    switch (kondisi) {
+      case 'Baik':
+        return 'bg-green-100 text-green-800';
+      case 'Rusak Ringan':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'Rusak Berat':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Data Inventaris</h1>
+          <p className="text-gray-600 mt-1">Kelola data inventaris sekolah</p>
+        </div>
+        <button
+          onClick={() => setShowModal(true)}
+          className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          <Plus className="w-4 h-4" />
+          <span>Tambah Inventaris</span>
+        </button>
+      </div>
+
+      {/* Filters */}
+      <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
+        <div className={`grid grid-cols-1 md:grid-cols-2 ${user?.role === 'admin' ? 'lg:grid-cols-5' : 'lg:grid-cols-4'} gap-4`}>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <input
+              type="text"
+              placeholder="Cari barang..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+          
+          <select
+            value={filterKategori}
+            onChange={(e) => setFilterKategori(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="">Semua Kategori</option>
+            <option value="Peralatan">Peralatan</option>
+            <option value="Perabot">Perabot</option>
+            <option value="Elektronik">Elektronik</option>
+            <option value="Buku">Buku</option>
+          </select>
+
+          {/* Only show location filter for admin */}
+          {user?.role === 'admin' && (
+            <select
+              value={filterLokasi}
+              onChange={(e) => setFilterLokasi(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="">Semua Lokasi</option>
+              <option value="PAUD">PAUD</option>
+              <option value="TK">TK</option>
+              <option value="SD">SD</option>
+              <option value="SMP">SMP</option>
+            </select>
+          )}
+
+          <select
+            value={filterKondisi}
+            onChange={(e) => setFilterKondisi(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="">Semua Kondisi</option>
+            <option value="Baik">Baik</option>
+            <option value="Rusak Ringan">Rusak Ringan</option>
+            <option value="Rusak Berat">Rusak Berat</option>
+          </select>
+
+          <div className="flex items-center text-sm text-gray-600">
+            <Filter className="w-4 h-4 mr-2" />
+            {filteredInventaris.length} dari {inventaris.length} item
+          </div>
+        </div>
+      </div>
+
+      {/* Table */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Nama Barang
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Kategori
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Jumlah
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Lokasi
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Kondisi
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Tanggal Input
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Aksi
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {filteredInventaris.map((item) => (
+                <tr key={item.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4">
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{item.nama_barang}</p>
+                      {item.keterangan && (
+                        <p className="text-sm text-gray-500">{item.keterangan}</p>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      {item.kategori}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-900">
+                    {item.jumlah}
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                      {item.lokasi}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center space-x-2">
+                      {getKondisiIcon(item.kondisi)}
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getKondisiColor(item.kondisi)}`}>
+                        {item.kondisi}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-500">
+                    {(() => {
+                      const src = (item as any).tanggal_input || (item as any).created_at || (item as any).updated_at;
+                      if (!src) return '-';
+                      const d = new Date(src);
+                      return isNaN(d.getTime()) ? '-' : d.toLocaleDateString('id-ID');
+                    })()}
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() => handleEdit(item)}
+                        className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      <button className="p-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                {editingItem ? 'Edit Inventaris' : 'Tambah Inventaris'}
+              </h2>
+              
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Nama Barang
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.nama_barang}
+                    onChange={(e) => setFormData({...formData, nama_barang: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Kategori
+                  </label>
+                  <select
+                    value={formData.kategori}
+                    onChange={(e) => setFormData({...formData, kategori: e.target.value as Kategori})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="Peralatan">Peralatan</option>
+                    <option value="Perabot">Perabot</option>
+                    <option value="Elektronik">Elektronik</option>
+                    <option value="Buku">Buku</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Jumlah
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.jumlah}
+                    onChange={(e) => setFormData({...formData, jumlah: parseInt(e.target.value) || 0})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    min="1"
+                    required
+                  />
+                </div>
+
+                {/* Only show location field for admin */}
+                {user?.role === 'admin' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Lokasi
+                    </label>
+                    <select
+                      value={formData.lokasi}
+                      onChange={(e) => setFormData({...formData, lokasi: e.target.value as Lokasi})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="PAUD">PAUD</option>
+                      <option value="TK">TK</option>
+                      <option value="SD">SD</option>
+                      <option value="SMP">SMP</option>
+                    </select>
+                  </div>
+                )}
+                
+                {/* Show location info for operators */}
+                {user?.role !== 'admin' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Lokasi
+                    </label>
+                    <div className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-700">
+                      {formData.lokasi}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">Lokasi otomatis berdasarkan role Anda</p>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Kondisi
+                  </label>
+                  <select
+                    value={formData.kondisi}
+                    onChange={(e) => setFormData({...formData, kondisi: e.target.value as Kondisi})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="Baik">Baik</option>
+                    <option value="Rusak Ringan">Rusak Ringan</option>
+                    <option value="Rusak Berat">Rusak Berat</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Keterangan
+                  </label>
+                  <textarea
+                    value={formData.keterangan}
+                    onChange={(e) => setFormData({...formData, keterangan: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    rows={3}
+                  />
+                </div>
+
+                <div className="flex space-x-3 pt-4">
+                  <button
+                    type="submit"
+                    className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    {editingItem ? 'Update' : 'Simpan'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowModal(false);
+                      resetForm();
+                    }}
+                    className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400 transition-colors"
+                  >
+                    Batal
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
