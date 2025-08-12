@@ -47,6 +47,9 @@ export default function LaporanPage() {
   const [selectedPeriod, setSelectedPeriod] = useState('this_month');
   const [selectedReport, setSelectedReport] = useState('overview');
 
+  // Display helper: rename TK -> TBSD for UI only
+  const displayLokasi = (l: string) => (l === 'TK' ? 'TBSD' : l);
+
   useEffect(() => {
     fetchReportData();
   }, [user, selectedPeriod]);
@@ -141,7 +144,7 @@ export default function LaporanPage() {
   }));
 
   const lokasiData = Object.entries(data.statistik.lokasi_distribution).map(([lokasi, jumlah]) => ({
-    name: lokasi,
+    name: displayLokasi(lokasi),
     value: jumlah
   }));
 
@@ -394,7 +397,7 @@ export default function LaporanPage() {
                       {item.jumlah}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-500">
-                      {item.lokasi}
+                      {displayLokasi(item.lokasi)}
                     </td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -469,7 +472,7 @@ export default function LaporanPage() {
                       {(item as any).satuan || '-'}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-500">
-                      {item.lokasi}
+                      {displayLokasi(item.lokasi)}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-900">
                       {item.batas_minimal}
@@ -576,7 +579,7 @@ export default function LaporanPage() {
                         {item.jumlah}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-500">
-                        {item.lokasi}
+                        {displayLokasi(item.lokasi)}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-500">
                         {item.keterangan || '-'}

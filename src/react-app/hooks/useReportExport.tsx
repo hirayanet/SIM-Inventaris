@@ -32,6 +32,9 @@ interface ReportStats {
 export const useReportExport = () => {
   const [isExporting, setIsExporting] = useState(false);
 
+  // Display helper: rename TK -> TBSD for outputs only
+  const displayLokasi = (l: string) => (l === 'TK' ? 'TBSD' : l);
+
   const formatTanggalInput = (item: any): string => {
     const src = item?.tanggal_input || item?.created_at || item?.updated_at;
     if (!src) return '-';
@@ -114,7 +117,7 @@ export const useReportExport = () => {
           item.nama_barang,
           item.kategori,
           item.jumlah.toString(),
-          item.lokasi,
+          displayLokasi(item.lokasi as any),
           item.kondisi,
           formatTanggalInput(item)
         ]);
@@ -138,7 +141,7 @@ export const useReportExport = () => {
           item.nama_obat,
           item.jumlah.toString(),
           (item as any).satuan || '-',
-          item.lokasi,
+          displayLokasi(item.lokasi as any),
           item.batas_minimal.toString(),
           item.tanggal_kadaluarsa ? new Date(item.tanggal_kadaluarsa).toLocaleDateString('id-ID') : '-',
           item.jumlah <= item.batas_minimal ? 'Stok Menipis' : 'Stok Aman',
@@ -168,7 +171,7 @@ export const useReportExport = () => {
             item.kategori,
             item.kondisi,
             item.jumlah.toString(),
-            item.lokasi,
+            displayLokasi(item.lokasi as any),
             item.keterangan || '-'
           ]);
         
@@ -229,7 +232,7 @@ export const useReportExport = () => {
           [],
           ['DISTRIBUSI LOKASI'],
           ['Lokasi', 'Jumlah'],
-          ...Object.entries(stats.lokasi_distribution).map(([lokasi, jumlah]) => [lokasi, jumlah])
+          ...Object.entries(stats.lokasi_distribution).map(([lokasi, jumlah]) => [displayLokasi(lokasi), jumlah])
         ];
         
         const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
@@ -242,7 +245,7 @@ export const useReportExport = () => {
           'Nama Barang': item.nama_barang,
           'Kategori': item.kategori,
           'Jumlah': item.jumlah,
-          'Lokasi': item.lokasi,
+          'Lokasi': displayLokasi(item.lokasi as any),
           'Kondisi': item.kondisi,
           'Tanggal Input': formatTanggalInput(item),
           'Keterangan': item.keterangan || ''
@@ -266,7 +269,7 @@ export const useReportExport = () => {
             'Nama Obat': item.nama_obat,
             'Stok': item.jumlah,
             'Satuan': (item as any).satuan || '',
-            'Lokasi': item.lokasi,
+            'Lokasi': displayLokasi(item.lokasi as any),
             'Batas Minimal': item.batas_minimal,
             'Tanggal Kadaluarsa': item.tanggal_kadaluarsa ? new Date(item.tanggal_kadaluarsa).toLocaleDateString('id-ID') : '',
             'Status': status,
@@ -288,7 +291,7 @@ export const useReportExport = () => {
             'Kategori': item.kategori,
             'Kondisi': item.kondisi,
             'Jumlah': item.jumlah,
-            'Lokasi': item.lokasi,
+            'Lokasi': displayLokasi(item.lokasi as any),
             'Tanggal Input': formatTanggalInput(item),
             'Keterangan': item.keterangan || ''
           }));

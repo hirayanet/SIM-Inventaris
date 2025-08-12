@@ -25,6 +25,9 @@ export default function InventarisPage() {
   const [filterLokasi, setFilterLokasi] = useState<string>('');
   const [filterKondisi, setFilterKondisi] = useState<string>('');
 
+  // Display helper: rename TK -> TBSD for UI only
+  const displayLokasi = (l: string) => (l === 'TK' ? 'TBSD' : l);
+
   // Form state
   const getUserDefaultLocation = (): Lokasi => {
     if (!user) return 'PAUD';
@@ -256,7 +259,7 @@ export default function InventarisPage() {
             >
               <option value="">Semua Lokasi</option>
               <option value="PAUD">PAUD</option>
-              <option value="TK">TK</option>
+              <option value="TK">TBSD</option>
               <option value="SD">SD</option>
               <option value="SMP">SMP</option>
             </select>
@@ -330,7 +333,7 @@ export default function InventarisPage() {
                   </td>
                   <td className="px-6 py-4">
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                      {item.lokasi}
+                      {displayLokasi(item.lokasi)}
                     </span>
                   </td>
                   <td className="px-6 py-4">
@@ -439,7 +442,7 @@ export default function InventarisPage() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
                       <option value="PAUD">PAUD</option>
-                      <option value="TK">TK</option>
+                      <option value="TK">TBSD</option>
                       <option value="SD">SD</option>
                       <option value="SMP">SMP</option>
                     </select>
@@ -453,7 +456,7 @@ export default function InventarisPage() {
                       Lokasi
                     </label>
                     <div className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-700">
-                      {formData.lokasi}
+                      {displayLokasi(formData.lokasi)}
                     </div>
                     <p className="text-xs text-gray-500 mt-1">Lokasi otomatis berdasarkan role Anda</p>
                   </div>

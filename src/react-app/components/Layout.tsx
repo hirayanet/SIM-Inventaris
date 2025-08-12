@@ -37,7 +37,7 @@ export default function Layout({ children }: LayoutProps) {
     switch (role) {
       case 'admin': return 'Administrator';
       case 'operator_paud': return 'Operator PAUD';
-      case 'operator_tk': return 'Operator TK';
+      case 'operator_tk': return 'Operator TBSD';
       case 'operator_sd': return 'Operator SD';
       case 'operator_smp': return 'Operator SMP';
       default: return role;

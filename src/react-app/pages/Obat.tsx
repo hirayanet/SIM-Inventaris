@@ -28,6 +28,9 @@ export default function ObatPage() {
   const [showLowStock, setShowLowStock] = useState(false);
   const [satuanOptions, setSatuanOptions] = useState<string[]>(['pcs','botol','tablet','strip','box','roll']);
 
+  // Display helper: rename TK -> TBSD for UI only
+  const displayLokasi = (l: string) => (l === 'TK' ? 'TBSD' : l);
+
   // Form state
   const getUserDefaultLocation = (): Lokasi => {
     if (!user) return 'PAUD';
@@ -344,7 +347,7 @@ export default function ObatPage() {
             >
               <option value="">Semua Lokasi</option>
               <option value="PAUD">PAUD</option>
-              <option value="TK">TK</option>
+              <option value="TK">TBSD</option>
               <option value="SD">SD</option>
               <option value="SMP">SMP</option>
             </select>
@@ -428,7 +431,7 @@ export default function ObatPage() {
                   </td>
                   <td className="px-6 py-4">
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                      {item.lokasi}
+                      {displayLokasi(item.lokasi as any)}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-900">
@@ -563,7 +566,7 @@ export default function ObatPage() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
                       <option value="PAUD">PAUD</option>
-                      <option value="TK">TK</option>
+                      <option value="TK">TBSD</option>
                       <option value="SD">SD</option>
                       <option value="SMP">SMP</option>
                     </select>
@@ -577,7 +580,7 @@ export default function ObatPage() {
                       Lokasi
                     </label>
                     <div className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-700">
-                      {formData.lokasi}
+                      {displayLokasi(formData.lokasi as any)}
                     </div>
                     <p className="text-xs text-gray-500 mt-1">Lokasi otomatis berdasarkan role Anda</p>
                   </div>
@@ -788,7 +791,7 @@ export default function ObatPage() {
                           {item.nama_obat}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-500">
-                          {item.lokasi}
+                          {displayLokasi(item.lokasi as any)}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-900">
                           {item.jumlah_keluar}

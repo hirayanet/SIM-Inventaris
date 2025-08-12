@@ -19,6 +19,9 @@ export default function Dashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Display helper: rename TK -> TBSD for UI only
+  const displayLokasi = (l: string) => (l === 'TK' ? 'TBSD' : l);
+
   useEffect(() => {
     if (!user) return;
 
@@ -219,7 +222,7 @@ export default function Dashboard() {
                   <div key={item.id} className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
                     <div>
                       <p className="font-medium text-gray-900">{item.nama_barang}</p>
-                      <p className="text-sm text-gray-600">{item.kategori} - {item.lokasi}</p>
+                      <p className="text-sm text-gray-600">{item.kategori} - {displayLokasi(item.lokasi as any)}</p>
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-medium text-red-600">
