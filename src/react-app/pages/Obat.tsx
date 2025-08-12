@@ -545,14 +545,14 @@ export default function ObatPage() {
                     <div className="flex items-center space-x-2">
                       <button
                         onClick={() => handleUsage(item)}
-                        className="p-1 text-green-600 hover:text-green-800 hover:bg-green-50 rounded"
+                        className="p-1 text-primary-600 hover:text-primary-800 hover:bg-primary-50 rounded"
                         title="Catat Penggunaan"
                       >
                         <ArrowDown className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => handleEdit(item)}
-                        className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded"
+                        className="p-1 text-primary-600 hover:text-primary-800 hover:bg-primary-50 rounded"
                         title="Edit"
                       >
                         <Edit className="w-4 h-4" />
@@ -592,7 +592,7 @@ export default function ObatPage() {
                     type="text"
                     value={formData.nama_obat}
                     onChange={(e) => setFormData({...formData, nama_obat: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                     required
                   />
                 </div>
@@ -605,7 +605,7 @@ export default function ObatPage() {
                     type="number"
                     value={formData.jumlah}
                     onChange={(e) => setFormData({...formData, jumlah: parseInt(e.target.value) || 0})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                     min="0"
                     required
                   />
@@ -620,7 +620,7 @@ export default function ObatPage() {
                     <select
                       value={formData.lokasi}
                       onChange={(e) => setFormData({...formData, lokasi: e.target.value as Lokasi})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                     >
                       <option value="PAUD">PAUD</option>
                       <option value="TK">TBSD</option>
@@ -650,7 +650,7 @@ export default function ObatPage() {
                   <select
                     value={formData.satuan}
                     onChange={(e) => setFormData({...formData, satuan: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   >
                     <option value="pcs">pcs</option>
                     <option value="botol">botol</option>
@@ -669,7 +669,7 @@ export default function ObatPage() {
                     type="date"
                     value={formData.tanggal_kadaluarsa}
                     onChange={(e) => setFormData({...formData, tanggal_kadaluarsa: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   />
                   <p className="text-xs text-gray-500 mt-1">Kosongkan jika tidak ada tanggal kadaluarsa</p>
                 </div>
@@ -682,7 +682,7 @@ export default function ObatPage() {
                     type="number"
                     value={formData.batas_minimal}
                     onChange={(e) => setFormData({...formData, batas_minimal: parseInt(e.target.value) || 5})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                     min="1"
                     required
                   />
@@ -695,7 +695,7 @@ export default function ObatPage() {
                   <textarea
                     value={formData.keterangan}
                     onChange={(e) => setFormData({...formData, keterangan: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                     rows={3}
                   />
                 </div>
@@ -704,7 +704,7 @@ export default function ObatPage() {
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className={`btn btn-primary ${isSubmitting ? 'opacity-75 cursor-not-allowed' : ''}`}
+                    className={`flex-1 bg-primary-600 text-white py-2 px-4 rounded-lg hover:bg-primary-700 transition-colors ${isSubmitting ? 'opacity-75 cursor-not-allowed' : ''}`}
                   >
                     {isSubmitting ? (
                       <>
@@ -741,14 +741,14 @@ export default function ObatPage() {
                 Catat Penggunaan Obat
               </h2>
               
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                <h3 className="font-medium text-blue-900">{selectedObat.nama_obat}</h3>
-                <p className="text-sm text-blue-700">Stok tersedia: {selectedObat.jumlah}</p>
+              <div className="bg-primary-50 border border-primary-200 rounded-lg p-4 mb-4">
+                <h3 className="font-medium text-primary-900">{selectedObat.nama_obat}</h3>
+                <p className="text-sm text-primary-700">Stok tersedia: {selectedObat.jumlah}</p>
                 {selectedObat.tanggal_kadaluarsa && (
                   <p className={`text-sm ${
                     isExpired(selectedObat) ? 'text-red-700' :
                     isExpiringSoon(selectedObat) ? 'text-orange-700' :
-                    'text-blue-700'
+                    'text-primary-700'
                   }`}>
                     Kadaluarsa: {new Date(selectedObat.tanggal_kadaluarsa).toLocaleDateString('id-ID')}
                     {isExpired(selectedObat) && ' (SUDAH KADALUARSA)'}
@@ -766,7 +766,7 @@ export default function ObatPage() {
                     type="number"
                     value={usageData.jumlah_keluar}
                     onChange={(e) => setUsageData({...usageData, jumlah_keluar: parseInt(e.target.value) || 0})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                     min="1"
                     max={selectedObat.jumlah}
                     required
@@ -780,7 +780,7 @@ export default function ObatPage() {
                   <textarea
                     value={usageData.keterangan}
                     onChange={(e) => setUsageData({...usageData, keterangan: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                     rows={3}
                     placeholder="Untuk apa obat digunakan..."
                   />
@@ -789,7 +789,7 @@ export default function ObatPage() {
                 <div className="flex space-x-3 pt-4">
                   <button
                     type="submit"
-                    className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors"
+                    className="flex-1 bg-primary-600 text-white py-2 px-4 rounded-lg hover:bg-primary-700 transition-colors"
                   >
                     Catat Penggunaan
                   </button>

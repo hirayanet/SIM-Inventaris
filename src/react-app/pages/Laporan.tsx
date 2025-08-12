@@ -445,7 +445,7 @@ export default function LaporanPage() {
                 <select
                   value={filterLokasiInventory}
                   onChange={(e) => setFilterLokasiInventory(e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full sm:w-auto"
+                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent w-full sm:w-auto"
                 >
                   <option value="">Semua Lokasi</option>
                   <option value="PAUD">PAUD</option>
@@ -536,7 +536,7 @@ export default function LaporanPage() {
                 <select
                   value={filterLokasiMedicine}
                   onChange={(e) => setFilterLokasiMedicine(e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full sm:w-auto"
+                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent w-full sm:w-auto"
                 >
                   <option value="">Semua Lokasi</option>
                   <option value="PAUD">PAUD</option>

@@ -280,7 +280,7 @@ export default function InventarisPage() {
             <p className="text-gray-600 mt-1">Kelola data inventaris sekolah</p>
           </div>
           <button
-            onClick={() => setShowModal(true)}
+            onClick={() => { resetForm(); setShowModal(true); }}
             className="flex items-center space-x-2 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors"
             aria-label="Tambah Inventaris"
           >
@@ -421,7 +421,7 @@ export default function InventarisPage() {
                       <div className="flex items-center space-x-2">
                         <button
                           onClick={() => handleEdit(item)}
-                          className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded"
+                          className="p-1 text-primary-600 hover:text-primary-800 hover:bg-primary-50 rounded"
                         >
                           <Edit className="w-4 h-4" />
                         </button>
@@ -453,7 +453,7 @@ export default function InventarisPage() {
               </h2>
               
               <form onSubmit={handleSubmit} className="space-y-4">
-                {/* Form fields here */}
+                {/* Nama Barang */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Nama Barang
@@ -461,9 +461,86 @@ export default function InventarisPage() {
                   <input
                     type="text"
                     value={formData.nama_barang}
-                    onChange={(e) => setFormData({...formData, nama_barang: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    onChange={(e) => setFormData({ ...formData, nama_barang: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                     required
+                  />
+                </div>
+
+                {/* Kategori & Jumlah */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Kategori</label>
+                    <select
+                      value={formData.kategori}
+                      onChange={(e) => setFormData({ ...formData, kategori: e.target.value as any })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    >
+                      <option value="Peralatan">Peralatan</option>
+                      <option value="Perabot">Perabot</option>
+                      <option value="Elektronik">Elektronik</option>
+                      <option value="Buku">Buku</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Jumlah</label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={formData.jumlah}
+                      onChange={(e) => setFormData({ ...formData, jumlah: Number(e.target.value) })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+
+                {/* Lokasi & Kondisi */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Lokasi</label>
+                    {user?.role === 'admin' ? (
+                      <select
+                        value={formData.lokasi}
+                        onChange={(e) => setFormData({ ...formData, lokasi: e.target.value as any })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                      >
+                        <option value="PAUD">PAUD</option>
+                        <option value="TK">TBSD</option>
+                        <option value="SD">SD</option>
+                        <option value="SMP">SMP</option>
+                      </select>
+                    ) : (
+                      <>
+                        <div className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-700">
+                          {displayLokasi(formData.lokasi as any)}
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">Lokasi otomatis berdasarkan role Anda</p>
+                      </>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Kondisi</label>
+                    <select
+                      value={formData.kondisi}
+                      onChange={(e) => setFormData({ ...formData, kondisi: e.target.value as any })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    >
+                      <option value="Baik">Baik</option>
+                      <option value="Rusak Ringan">Rusak Ringan</option>
+                      <option value="Rusak Berat">Rusak Berat</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Keterangan */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Keterangan</label>
+                  <textarea
+                    value={formData.keterangan}
+                    onChange={(e) => setFormData({ ...formData, keterangan: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    rows={3}
+                    placeholder="Opsional"
                   />
                 </div>
 
@@ -471,7 +548,7 @@ export default function InventarisPage() {
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className={`flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors ${isSubmitting ? 'opacity-75 cursor-not-allowed' : ''}`}
+                    className={`flex-1 bg-primary-600 text-white py-2 px-4 rounded-lg hover:bg-primary-700 transition-colors ${isSubmitting ? 'opacity-75 cursor-not-allowed' : ''}`}
                   >
                     {isSubmitting ? (
                       <div className="flex items-center justify-center">
