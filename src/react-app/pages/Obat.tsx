@@ -13,7 +13,7 @@ import {
   ArrowDown,
   Loader2
 } from 'lucide-react';
-import toast, { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 
 export default function ObatPage() {
   const { user } = useAuth();
@@ -131,6 +131,9 @@ export default function ObatPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    const loadingToast = toast.loading(editingItem ? 'Memperbarui obat...' : 'Menyimpan obat baru...');
+    setIsSubmitting(true);
+    
     try {
       if (editingItem) {
         const { error } = await supabase
@@ -143,9 +146,12 @@ export default function ObatPage() {
             tanggal_kadaluarsa: formData.tanggal_kadaluarsa || null,
             batas_minimal: formData.batas_minimal,
             keterangan: formData.keterangan || null,
+            updated_at: new Date().toISOString()
           })
           .eq('id', editingItem.id);
+          
         if (error) throw error;
+        toast.success('Data obat berhasil diperbarui', { id: loadingToast });
       } else {
         const { error } = await supabase
           .from('obat')
@@ -159,9 +165,12 @@ export default function ObatPage() {
               batas_minimal: formData.batas_minimal,
               keterangan: formData.keterangan || null,
               created_by_user_id: user?.id || null,
+              created_at: new Date().toISOString()
             },
           ]);
+          
         if (error) throw error;
+        toast.success('Data obat berhasil disimpan', { id: loadingToast });
       }
 
       await fetchObat();
@@ -169,7 +178,8 @@ export default function ObatPage() {
       resetForm();
     } catch (error) {
       console.error('Error saving obat:', error);
-      toast.error(`Gagal menyimpan data obat: ${error.message}`, { id: loadingToast });
+      const errorMessage = error instanceof Error ? error.message : 'Terjadi kesalahan yang tidak diketahui';
+      toast.error(`Gagal menyimpan data obat: ${errorMessage}`, { id: loadingToast });
     } finally {
       setIsSubmitting(false);
     }
@@ -214,7 +224,7 @@ export default function ObatPage() {
           nama_obat: selectedObat.nama_obat,
           jumlah: usageData.jumlah_keluar,
           jenis: 'keluar',
-          keterangan: usageData.keterangan || `Penggunaan obat oleh ${user?.email || 'user'}`,
+          keterangan: usageData.keterangan || `Penggunaan obat oleh ${user?.username || 'user'}`,
           created_by_user_id: user?.id || null,
           created_at: new Date().toISOString()
         }]);
@@ -227,7 +237,8 @@ export default function ObatPage() {
       await Promise.all([fetchObat(), fetchRiwayat()]);
     } catch (error) {
       console.error('Error recording usage:', error);
-      toast.error(`Gagal mencatat penggunaan: ${error.message}`, { id: loadingToast });
+      const errorMessage = error instanceof Error ? error.message : 'Terjadi kesalahan yang tidak diketahui';
+      toast.error(`Gagal mencatat penggunaan: ${errorMessage}`, { id: loadingToast });
     } finally {
       setIsSubmitting(false);
     }
