@@ -50,6 +50,33 @@ export default function LaporanPage() {
   // Display helper: rename TK -> TBSD for UI only
   const displayLokasi = (l: string) => (l === 'TK' ? 'TBSD' : l);
 
+  // Fungsi untuk mendapatkan urutan lokasi
+  const getLokasiOrder = (lokasi: string): number => {
+    switch (lokasi) {
+      case 'PAUD': return 0;
+      case 'TK': return 1;
+      case 'SD': return 2;
+      case 'SMP': return 3;
+      default: return 99;
+    }
+  };
+
+  // Fungsi untuk mengurutkan data obat
+  const getSortedObat = (obatList: Obat[]) => {
+    return [...obatList].sort((a, b) => {
+      // Urutkan berdasarkan lokasi terlebih dahulu (PAUD -> TK -> SD -> SMP)
+      const orderA = getLokasiOrder(a.lokasi);
+      const orderB = getLokasiOrder(b.lokasi);
+      
+      if (orderA !== orderB) {
+        return orderA - orderB;
+      }
+      
+      // Jika lokasi sama, urutkan berdasarkan nama obat (A-Z)
+      return a.nama_obat.localeCompare(b.nama_obat);
+    });
+  };
+
   useEffect(() => {
     fetchReportData();
   }, [user, selectedPeriod]);
@@ -460,7 +487,7 @@ export default function LaporanPage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {data.obat.map((item) => (
+                {getSortedObat(data.obat).map((item) => (
                   <tr key={item.id}>
                     <td className="px-6 py-4 text-sm font-medium text-gray-900">
                       {item.nama_obat}

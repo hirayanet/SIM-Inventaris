@@ -10,14 +10,17 @@ import {
   Trash2, 
   AlertTriangle,
   History,
-  ArrowDown
+  ArrowDown,
+  Loader2
 } from 'lucide-react';
+import toast, { Toaster } from 'react-hot-toast';
 
 export default function ObatPage() {
   const { user } = useAuth();
   const [obat, setObat] = useState<Obat[]>([]);
   const [riwayat, setRiwayat] = useState<RiwayatObat[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [showUsageModal, setShowUsageModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
@@ -166,47 +169,67 @@ export default function ObatPage() {
       resetForm();
     } catch (error) {
       console.error('Error saving obat:', error);
+      toast.error(`Gagal menyimpan data obat: ${error.message}`, { id: loadingToast });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleUsageSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!selectedObat) return;
-
+    
+    if (isSubmitting) {
+      toast('Sedang memproses...', { icon: '⏳' });
+      return;
+    }
+    
+    setIsSubmitting(true);
+    const loadingToast = toast.loading('Mencatat penggunaan obat...');
+    
     try {
-      // validasi stok cukup
-      if (usageData.jumlah_keluar <= 0) throw new Error('Jumlah keluar harus > 0');
-      if (usageData.jumlah_keluar > selectedObat.jumlah) throw new Error('Stok tidak mencukupi');
-
-      // Kurangi stok obat
-      const { error: updErr } = await supabase
+      // Update stock
+      const newJumlah = selectedObat.jumlah - usageData.jumlah_keluar;
+      
+      if (newJumlah < 0) {
+        toast.error('Stok tidak mencukupi!', { id: loadingToast });
+        return;
+      }
+      
+      const { error: updateError } = await supabase
         .from('obat')
-        .update({ jumlah: selectedObat.jumlah - usageData.jumlah_keluar })
+        .update({ 
+          jumlah: newJumlah,
+          updated_at: new Date().toISOString()
+        })
         .eq('id', selectedObat.id);
-      if (updErr) throw updErr;
-
-      // Catat riwayat pemakaian
-      const { error: insErr } = await supabase
+        
+      if (updateError) throw updateError;
+      
+      // Add to history
+      const { error: historyError } = await supabase
         .from('riwayat_obat')
-        .insert([
-          {
-            obat_id: selectedObat.id,
-            jumlah_keluar: usageData.jumlah_keluar,
-            tanggal_keluar: new Date().toISOString(),
-            keterangan: usageData.keterangan || null,
-            created_by_user_id: user?.id || null,
-          },
-        ]);
-      if (insErr) throw insErr;
-
-      await fetchObat();
-      await fetchRiwayat();
+        .insert([{
+          obat_id: selectedObat.id,
+          nama_obat: selectedObat.nama_obat,
+          jumlah: usageData.jumlah_keluar,
+          jenis: 'keluar',
+          keterangan: usageData.keterangan || `Penggunaan obat oleh ${user?.email || 'user'}`,
+          created_by_user_id: user?.id || null,
+          created_at: new Date().toISOString()
+        }]);
+        
+      if (historyError) throw historyError;
+      
+      toast.success('Penggunaan obat berhasil dicatat', { id: loadingToast });
       setShowUsageModal(false);
       setUsageData({ jumlah_keluar: 0, keterangan: '' });
-      setSelectedObat(null);
+      await Promise.all([fetchObat(), fetchRiwayat()]);
     } catch (error) {
       console.error('Error recording usage:', error);
+      toast.error(`Gagal mencatat penggunaan: ${error.message}`, { id: loadingToast });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -264,14 +287,38 @@ export default function ObatPage() {
     setEditingItem(null);
   };
 
-  const filteredObat = obat.filter(item => {
-    const matchesSearch = item.nama_obat.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         item.keterangan?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesLokasi = !filterLokasi || item.lokasi === filterLokasi;
-    const matchesLowStock = !showLowStock || item.jumlah <= item.batas_minimal;
-    
-    return matchesSearch && matchesLokasi && matchesLowStock;
-  });
+  // Fungsi untuk mendapatkan urutan lokasi
+  const getLokasiOrder = (lokasi: string): number => {
+    switch (lokasi) {
+      case 'PAUD': return 0;
+      case 'TK': return 1;
+      case 'SD': return 2;
+      case 'SMP': return 3;
+      default: return 99;
+    }
+  };
+
+  const filteredObat = [...obat]
+    .filter(item => {
+      const matchesSearch = item.nama_obat.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          (item.keterangan?.toLowerCase() || '').includes(searchTerm.toLowerCase());
+      const matchesLokasi = !filterLokasi || item.lokasi === filterLokasi;
+      const matchesLowStock = !showLowStock || item.jumlah <= item.batas_minimal;
+      
+      return matchesSearch && matchesLokasi && matchesLowStock;
+    })
+    .sort((a, b) => {
+      // Urutkan berdasarkan lokasi terlebih dahulu (PAUD -> TK -> SD -> SMP)
+      const orderA = getLokasiOrder(a.lokasi);
+      const orderB = getLokasiOrder(b.lokasi);
+      
+      if (orderA !== orderB) {
+        return orderA - orderB;
+      }
+      
+      // Jika lokasi sama, urutkan berdasarkan nama obat (A-Z)
+      return a.nama_obat.localeCompare(b.nama_obat);
+    });
 
   const isLowStock = (item: Obat) => item.jumlah <= item.batas_minimal;
   
@@ -646,9 +693,17 @@ export default function ObatPage() {
                 <div className="flex space-x-3 pt-4">
                   <button
                     type="submit"
-                    className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
+                    disabled={isSubmitting}
+                    className={`btn btn-primary ${isSubmitting ? 'opacity-75 cursor-not-allowed' : ''}`}
                   >
-                    {editingItem ? 'Update' : 'Simpan'}
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="animate-spin mr-2 h-4 w-4" />
+                        {editingItem ? 'Memperbarui...' : 'Menyimpan...'}
+                      </>
+                    ) : (
+                      <>{editingItem ? 'Perbarui' : 'Simpan'}</>
+                    )}
                   </button>
                   <button
                     type="button"

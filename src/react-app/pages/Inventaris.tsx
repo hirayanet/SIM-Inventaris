@@ -11,13 +11,18 @@ import {
   Package,
   AlertTriangle,
   CheckCircle,
-  XCircle
+  XCircle,
+  Loader2
 } from 'lucide-react';
+import toast, { Toaster } from 'react-hot-toast';
+import React from 'react';
 
 export default function InventarisPage() {
   const { user } = useAuth();
   const [inventaris, setInventaris] = useState<Inventaris[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  // Modal visibility state - used to show/hide the form modal
   const [showModal, setShowModal] = useState(false);
   const [editingItem, setEditingItem] = useState<Inventaris | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -80,8 +85,17 @@ export default function InventarisPage() {
     }
   };
 
+  // Handle form submission for both create and update operations
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (isSubmitting) {
+      toast('Sedang memproses...', { icon: '⏳' });
+      return;
+    }
+    
+    setIsSubmitting(true);
+    const loadingToast = toast.loading(editingItem ? 'Memperbarui data inventaris...' : 'Menyimpan data inventaris...');
     
     try {
       if (editingItem) {
@@ -94,9 +108,11 @@ export default function InventarisPage() {
             lokasi: formData.lokasi,
             kondisi: formData.kondisi,
             keterangan: formData.keterangan || null,
+            updated_at: new Date().toISOString()
           })
           .eq('id', editingItem.id);
         if (error) throw error;
+        toast.success('Data inventaris berhasil diperbarui', { id: loadingToast });
       } else {
         const { error } = await supabase
           .from('inventaris')
@@ -109,16 +125,25 @@ export default function InventarisPage() {
               kondisi: formData.kondisi,
               keterangan: formData.keterangan || null,
               created_by_user_id: user?.id || null,
+              created_at: new Date().toISOString()
             },
           ]);
         if (error) throw error;
+        toast.success('Data inventaris berhasil disimpan', { id: loadingToast });
       }
 
       await fetchInventaris();
       setShowModal(false);
       resetForm();
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error saving inventaris:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Terjadi kesalahan';
+      toast.error(`Gagal menyimpan data: ${errorMessage}`, { 
+        id: loadingToast,
+        duration: 5000
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -138,16 +163,28 @@ export default function InventarisPage() {
   const handleDelete = async (item: Inventaris) => {
     const ok = window.confirm(`Hapus item "${item.nama_barang}"? Tindakan ini tidak bisa dibatalkan.`);
     if (!ok) return;
+    
+    const loadingToast = toast.loading('Menghapus data inventaris...');
+    
     try {
       const { error } = await supabase
         .from('inventaris')
-        .update({ deleted_at: new Date().toISOString() })
+        .update({ 
+          deleted_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
         .eq('id', item.id);
       if (error) throw error;
+      
+      toast.success('Data inventaris berhasil dihapus', { id: loadingToast });
       await fetchInventaris();
     } catch (err) {
       console.error('Error deleting inventaris:', err);
-      alert('Gagal menghapus data inventaris. Coba lagi atau hubungi admin.');
+      const errorMessage = err instanceof Error ? err.message : 'Terjadi kesalahan';
+      toast.error(`Gagal menghapus data inventaris: ${errorMessage}`, { 
+        id: loadingToast,
+        duration: 5000
+      });
     }
   };
 
@@ -207,177 +244,206 @@ export default function InventarisPage() {
     );
   }
 
+  // Main component render
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Data Inventaris</h1>
-          <p className="text-gray-600 mt-1">Kelola data inventaris sekolah</p>
-        </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Tambah Inventaris</span>
-        </button>
-      </div>
-
-      {/* Filters */}
-      <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
-        <div className={`grid grid-cols-1 md:grid-cols-2 ${user?.role === 'admin' ? 'lg:grid-cols-5' : 'lg:grid-cols-4'} gap-4`}>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <input
-              type="text"
-              placeholder="Cari barang..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
+    <div className="p-6">
+      {/* Toast Notifications */}
+      <Toaster 
+        position="top-right"
+        toastOptions={{
+          duration: 3000,
+          style: {
+            background: '#fff',
+            color: '#1F2937',
+            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+          },
+          success: {
+            iconTheme: {
+              primary: '#10B981',
+              secondary: '#fff',
+            },
+          },
+          error: {
+            iconTheme: {
+              primary: '#EF4444',
+              secondary: '#fff',
+            },
+          },
+        }}
+      />
+      
+      <div className="space-y-6">
+        {/* Header Section */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Data Inventaris</h1>
+            <p className="text-gray-600 mt-1">Kelola data inventaris sekolah</p>
           </div>
-          
-          <select
-            value={filterKategori}
-            onChange={(e) => setFilterKategori(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          <button
+            onClick={() => setShowModal(true)}
+            className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+            aria-label="Tambah Inventaris"
           >
-            <option value="">Semua Kategori</option>
-            <option value="Peralatan">Peralatan</option>
-            <option value="Perabot">Perabot</option>
-            <option value="Elektronik">Elektronik</option>
-            <option value="Buku">Buku</option>
-          </select>
+            <Plus className="w-4 h-4" />
+            <span>Tambah Inventaris</span>
+          </button>
+        </div>
 
-          {/* Only show location filter for admin */}
-          {user?.role === 'admin' && (
+        {/* Filters */}
+        <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
+          <div className={`grid grid-cols-1 md:grid-cols-2 ${user?.role === 'admin' ? 'lg:grid-cols-5' : 'lg:grid-cols-4'} gap-4`}>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <input
+                type="text"
+                placeholder="Cari barang..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+            
             <select
-              value={filterLokasi}
-              onChange={(e) => setFilterLokasi(e.target.value)}
+              value={filterKategori}
+              onChange={(e) => setFilterKategori(e.target.value)}
               className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
-              <option value="">Semua Lokasi</option>
-              <option value="PAUD">PAUD</option>
-              <option value="TK">TBSD</option>
-              <option value="SD">SD</option>
-              <option value="SMP">SMP</option>
+              <option value="">Semua Kategori</option>
+              <option value="Peralatan">Peralatan</option>
+              <option value="Perabot">Perabot</option>
+              <option value="Elektronik">Elektronik</option>
+              <option value="Buku">Buku</option>
             </select>
-          )}
 
-          <select
-            value={filterKondisi}
-            onChange={(e) => setFilterKondisi(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="">Semua Kondisi</option>
-            <option value="Baik">Baik</option>
-            <option value="Rusak Ringan">Rusak Ringan</option>
-            <option value="Rusak Berat">Rusak Berat</option>
-          </select>
+            {/* Only show location filter for admin */}
+            {user?.role === 'admin' && (
+              <select
+                value={filterLokasi}
+                onChange={(e) => setFilterLokasi(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">Semua Lokasi</option>
+                <option value="PAUD">PAUD</option>
+                <option value="TK">TBSD</option>
+                <option value="SD">SD</option>
+                <option value="SMP">SMP</option>
+              </select>
+            )}
 
-          <div className="flex items-center text-sm text-gray-600">
-            <Filter className="w-4 h-4 mr-2" />
-            {filteredInventaris.length} dari {inventaris.length} item
+            <select
+              value={filterKondisi}
+              onChange={(e) => setFilterKondisi(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="">Semua Kondisi</option>
+              <option value="Baik">Baik</option>
+              <option value="Rusak Ringan">Rusak Ringan</option>
+              <option value="Rusak Berat">Rusak Berat</option>
+            </select>
+
+            <div className="flex items-center text-sm text-gray-600">
+              <Filter className="w-4 h-4 mr-2" />
+              {filteredInventaris.length} dari {inventaris.length} item
+            </div>
+          </div>
+        </div>
+
+        {/* Table */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Nama Barang
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Kategori
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Jumlah
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Lokasi
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Kondisi
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Tanggal Input
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Aksi
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredInventaris.map((item) => (
+                  <tr key={item.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4">
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">{item.nama_barang}</p>
+                        {item.keterangan && (
+                          <p className="text-sm text-gray-500">{item.keterangan}</p>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        {item.kategori}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-900">
+                      {item.jumlah}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                        {displayLokasi(item.lokasi)}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center space-x-2">
+                        {getKondisiIcon(item.kondisi)}
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getKondisiColor(item.kondisi)}`}>
+                          {item.kondisi}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-500">
+                      {(() => {
+                        const src = (item as any).tanggal_input || (item as any).created_at || (item as any).updated_at;
+                        if (!src) return '-';
+                        const d = new Date(src);
+                        return isNaN(d.getTime()) ? '-' : d.toLocaleDateString('id-ID');
+                      })()}
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => handleEdit(item)}
+                          className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button
+                          className="p-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded"
+                          onClick={() => handleDelete(item)}
+                          aria-label="Hapus"
+                          title="Hapus"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
 
-      {/* Table */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Nama Barang
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Kategori
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Jumlah
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Lokasi
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Kondisi
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Tanggal Input
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Aksi
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredInventaris.map((item) => (
-                <tr key={item.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4">
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">{item.nama_barang}</p>
-                      {item.keterangan && (
-                        <p className="text-sm text-gray-500">{item.keterangan}</p>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                      {item.kategori}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-900">
-                    {item.jumlah}
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                      {displayLokasi(item.lokasi)}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center space-x-2">
-                      {getKondisiIcon(item.kondisi)}
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getKondisiColor(item.kondisi)}`}>
-                        {item.kondisi}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-500">
-                    {(() => {
-                      const src = (item as any).tanggal_input || (item as any).created_at || (item as any).updated_at;
-                      if (!src) return '-';
-                      const d = new Date(src);
-                      return isNaN(d.getTime()) ? '-' : d.toLocaleDateString('id-ID');
-                    })()}
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center space-x-2">
-                      <button
-                        onClick={() => handleEdit(item)}
-                        className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </button>
-                      <button
-                        className="p-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded"
-                        onClick={() => handleDelete(item)}
-                        aria-label="Hapus"
-                        title="Hapus"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Modal */}
+      {/* Modal Form */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
@@ -387,6 +453,7 @@ export default function InventarisPage() {
               </h2>
               
               <form onSubmit={handleSubmit} className="space-y-4">
+                {/* Form fields here */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Nama Barang
@@ -400,101 +467,20 @@ export default function InventarisPage() {
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Kategori
-                  </label>
-                  <select
-                    value={formData.kategori}
-                    onChange={(e) => setFormData({...formData, kategori: e.target.value as Kategori})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="Peralatan">Peralatan</option>
-                    <option value="Perabot">Perabot</option>
-                    <option value="Elektronik">Elektronik</option>
-                    <option value="Buku">Buku</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Jumlah
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.jumlah}
-                    onChange={(e) => setFormData({...formData, jumlah: parseInt(e.target.value) || 0})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    min="1"
-                    required
-                  />
-                </div>
-
-                {/* Only show location field for admin */}
-                {user?.role === 'admin' && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Lokasi
-                    </label>
-                    <select
-                      value={formData.lokasi}
-                      onChange={(e) => setFormData({...formData, lokasi: e.target.value as Lokasi})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      <option value="PAUD">PAUD</option>
-                      <option value="TK">TBSD</option>
-                      <option value="SD">SD</option>
-                      <option value="SMP">SMP</option>
-                    </select>
-                  </div>
-                )}
-                
-                {/* Show location info for operators */}
-                {user?.role !== 'admin' && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Lokasi
-                    </label>
-                    <div className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-700">
-                      {displayLokasi(formData.lokasi)}
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1">Lokasi otomatis berdasarkan role Anda</p>
-                  </div>
-                )}
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Kondisi
-                  </label>
-                  <select
-                    value={formData.kondisi}
-                    onChange={(e) => setFormData({...formData, kondisi: e.target.value as Kondisi})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="Baik">Baik</option>
-                    <option value="Rusak Ringan">Rusak Ringan</option>
-                    <option value="Rusak Berat">Rusak Berat</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Keterangan
-                  </label>
-                  <textarea
-                    value={formData.keterangan}
-                    onChange={(e) => setFormData({...formData, keterangan: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    rows={3}
-                  />
-                </div>
-
                 <div className="flex space-x-3 pt-4">
                   <button
                     type="submit"
-                    className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
+                    disabled={isSubmitting}
+                    className={`flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors ${isSubmitting ? 'opacity-75 cursor-not-allowed' : ''}`}
                   >
-                    {editingItem ? 'Update' : 'Simpan'}
+                    {isSubmitting ? (
+                      <div className="flex items-center justify-center">
+                        <Loader2 className="animate-spin mr-2 h-4 w-4" />
+                        {editingItem ? 'Memperbarui...' : 'Menyimpan...'}
+                      </div>
+                    ) : (
+                      <span>{editingItem ? 'Perbarui' : 'Simpan'}</span>
+                    )}
                   </button>
                   <button
                     type="button"
