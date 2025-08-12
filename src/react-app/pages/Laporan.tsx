@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/react-app/hooks/useAuth';
-import { useReportExport } from '@/react-app/hooks/useReportExport';
+import useReportExport from '@/react-app/hooks/useReportExport';
 import { Inventaris, Obat } from '@/shared/types';
 import { supabase } from '@/lib/supabase';
 import { 
@@ -46,6 +46,9 @@ export default function LaporanPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedPeriod, setSelectedPeriod] = useState('this_month');
   const [selectedReport, setSelectedReport] = useState('overview');
+  // Filter lokasi per tab (admin only UI)
+  const [filterLokasiInventory, setFilterLokasiInventory] = useState<string>('');
+  const [filterLokasiMedicine, setFilterLokasiMedicine] = useState<string>('');
 
   // Display helper: rename TK -> TBSD for UI only
   const displayLokasi = (l: string) => (l === 'TK' ? 'TBSD' : l);
@@ -135,12 +138,56 @@ export default function LaporanPage() {
 
   const generatePDFReport = () => {
     if (!data) return;
-    exportToPDF(data, data.statistik, selectedReport, getPeriodLabel(selectedPeriod));
+    // Tentukan data terfilter untuk export berdasarkan tab aktif
+    let exportData = data;
+    let periodLabel = getPeriodLabel(selectedPeriod);
+    if (selectedReport === 'inventory' && filterLokasiInventory) {
+      exportData = {
+        ...data,
+        inventaris: (data.inventaris || []).filter((i) => i.lokasi === filterLokasiInventory),
+      };
+      periodLabel = `${periodLabel} • Lokasi: ${displayLokasi(filterLokasiInventory)}`;
+    } else if (selectedReport === 'medicine' && filterLokasiMedicine) {
+      exportData = {
+        ...data,
+        obat: (data.obat || []).filter((o) => o.lokasi === filterLokasiMedicine),
+      };
+      periodLabel = `${periodLabel} • Lokasi: ${displayLokasi(filterLokasiMedicine)}`;
+    }
+
+    exportToPDF(
+      exportData, 
+      exportData.statistik, 
+      selectedReport as 'overview' | 'inventory' | 'medicine' | 'condition' | 'all', 
+      periodLabel
+    );
   };
 
   const generateExcelReport = () => {
     if (!data) return;
-    exportToExcel(data, data.statistik, selectedReport, getPeriodLabel(selectedPeriod));
+    // Tentukan data terfilter untuk export berdasarkan tab aktif
+    let exportData = data;
+    let periodLabel = getPeriodLabel(selectedPeriod);
+    if (selectedReport === 'inventory' && filterLokasiInventory) {
+      exportData = {
+        ...data,
+        inventaris: (data.inventaris || []).filter((i) => i.lokasi === filterLokasiInventory),
+      };
+      periodLabel = `${periodLabel} • Lokasi: ${displayLokasi(filterLokasiInventory)}`;
+    } else if (selectedReport === 'medicine' && filterLokasiMedicine) {
+      exportData = {
+        ...data,
+        obat: (data.obat || []).filter((o) => o.lokasi === filterLokasiMedicine),
+      };
+      periodLabel = `${periodLabel} • Lokasi: ${displayLokasi(filterLokasiMedicine)}`;
+    }
+
+    exportToExcel(
+      exportData, 
+      exportData.statistik, 
+      selectedReport as 'overview' | 'inventory' | 'medicine' | 'condition' | 'all', 
+      periodLabel
+    );
   };
 
   if (isLoading) {
@@ -176,6 +223,12 @@ export default function LaporanPage() {
   }));
 
   const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
+
+  // Data terfilter berdasarkan lokasi (untuk tab)
+  const filteredInventaris = (data?.inventaris || []).filter((item) => !filterLokasiInventory || item.lokasi === filterLokasiInventory);
+  const sortedMedicine = getSortedObat(data?.obat || []);
+  const filteredMedicine = sortedMedicine.filter((item) => !filterLokasiMedicine || item.lokasi === filterLokasiMedicine);
+  const totalStokMedicine = filteredMedicine.reduce((sum, item) => sum + (item.jumlah || 0), 0);
 
   return (
     <div className="space-y-6">
@@ -386,6 +439,25 @@ export default function LaporanPage() {
             <h3 className="text-lg font-semibold text-gray-900 mb-4">
               Detail Inventaris
             </h3>
+            {/* Filter Lokasi (Admin) */}
+            {user?.role === 'admin' && (
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                <select
+                  value={filterLokasiInventory}
+                  onChange={(e) => setFilterLokasiInventory(e.target.value)}
+                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full sm:w-auto"
+                >
+                  <option value="">Semua Lokasi</option>
+                  <option value="PAUD">PAUD</option>
+                  <option value="TK">TBSD</option>
+                  <option value="SD">SD</option>
+                  <option value="SMP">SMP</option>
+                </select>
+                <div className="text-sm text-gray-600">
+                  {filteredInventaris.length} dari {(data?.inventaris || []).length} item
+                </div>
+              </div>
+            )}
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -412,7 +484,7 @@ export default function LaporanPage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {data.inventaris.map((item) => (
+                {filteredInventaris.map((item) => (
                   <tr key={item.id}>
                     <td className="px-6 py-4 text-sm font-medium text-gray-900">
                       {item.nama_barang}
@@ -458,6 +530,25 @@ export default function LaporanPage() {
             <h3 className="text-lg font-semibold text-gray-900 mb-4">
               Detail Obat-obatan
             </h3>
+            {/* Filter Lokasi (Admin) */}
+            {user?.role === 'admin' && (
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                <select
+                  value={filterLokasiMedicine}
+                  onChange={(e) => setFilterLokasiMedicine(e.target.value)}
+                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full sm:w-auto"
+                >
+                  <option value="">Semua Lokasi</option>
+                  <option value="PAUD">PAUD</option>
+                  <option value="TK">TBSD</option>
+                  <option value="SD">SD</option>
+                  <option value="SMP">SMP</option>
+                </select>
+                <div className="text-sm text-gray-600">
+                  {filteredMedicine.length} dari {(data?.obat || []).length} item • Total stok {totalStokMedicine.toLocaleString('id-ID')}
+                </div>
+              </div>
+            )}
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -487,7 +578,7 @@ export default function LaporanPage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {getSortedObat(data.obat).map((item) => (
+                {filteredMedicine.map((item) => (
                   <tr key={item.id}>
                     <td className="px-6 py-4 text-sm font-medium text-gray-900">
                       {item.nama_obat}
