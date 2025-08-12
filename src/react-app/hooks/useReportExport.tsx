@@ -2,7 +2,7 @@ import { useState } from 'react';
 // Import jsPDF dan autoTable
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import { Inventaris, Obat } from '@/shared/types';
 
 // Extend the Obat type to include satuan
@@ -82,6 +82,74 @@ const useReportExport = (): UseReportExport => {
     return isNaN(d.getTime()) ? '-' : d.toLocaleDateString('id-ID');
   };
 
+  // Helper: create styled worksheet with merged title and colored header row (ExcelJS)
+  const createStyledSheet = (
+    workbook: ExcelJS.Workbook,
+    sheetName: string,
+    title: string,
+    period: string,
+    headers: string[],
+    rows: (string | number | boolean | null)[][],
+    headerColor: string = 'FF10B981' // ARGB (FF + primary emerald 500)
+  ) => {
+    const sheet = workbook.addWorksheet(sheetName, {
+      pageSetup: { orientation: 'landscape', fitToPage: true, fitToWidth: 1 },
+      properties: { defaultRowHeight: 18 },
+    });
+
+    // Title row
+    const titleRow = sheet.addRow([title]);
+    titleRow.font = { size: 16, bold: true };
+    titleRow.alignment = { horizontal: 'center' };
+    sheet.mergeCells(1, 1, 1, Math.max(1, headers.length));
+
+    // Period and date rows
+    const periodRow = sheet.addRow([`Periode: ${period}`]);
+    const dateRow = sheet.addRow([`Tanggal: ${new Date().toLocaleDateString('id-ID')}`]);
+    periodRow.alignment = { horizontal: 'left' };
+    dateRow.alignment = { horizontal: 'left' };
+
+    sheet.addRow([]); // empty spacer
+
+    // Header row
+    const headerRow = sheet.addRow(headers);
+    headerRow.eachCell((cell: ExcelJS.Cell) => {
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: headerColor } } as ExcelJS.Fill;
+      cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      cell.border = {
+        top: { style: 'thin', color: { argb: 'FFCCCCCC' } },
+        bottom: { style: 'thin', color: { argb: 'FFCCCCCC' } },
+        left: { style: 'thin', color: { argb: 'FFCCCCCC' } },
+        right: { style: 'thin', color: { argb: 'FFCCCCCC' } },
+      } as ExcelJS.Borders;
+    });
+
+    // Column widths
+    sheet.columns = headers.map((h) => ({ width: Math.max(12, String(h).length + 4) }));
+
+    // Data rows
+    rows.forEach((r, idx) => {
+      const row = sheet.addRow(r);
+      row.eachCell((cell: ExcelJS.Cell) => {
+        cell.border = {
+          top: { style: 'hair', color: { argb: 'FFE0E0E0' } },
+          bottom: { style: 'hair', color: { argb: 'FFE0E0E0' } },
+          left: { style: 'hair', color: { argb: 'FFE0E0E0' } },
+          right: { style: 'hair', color: { argb: 'FFE0E0E0' } },
+        } as ExcelJS.Borders;
+      });
+      // Simple zebra striping
+      if (idx % 2 === 1) {
+        row.eachCell((cell: ExcelJS.Cell) => {
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF5F5F5' } } as ExcelJS.Fill;
+        });
+      }
+    });
+
+    return sheet;
+  };
+
   // Fungsi untuk menambahkan header halaman
   const addHeader = (doc: jsPDF, title: string, period: string) => {
     doc.setFontSize(20);
@@ -92,8 +160,8 @@ const useReportExport = (): UseReportExport => {
     doc.text(`Tanggal: ${new Date().toLocaleDateString('id-ID')}`, 20, 38);
     
     // Tambahkan garis pemisah
-    doc.setDrawColor(200, 200, 200);
-    doc.setLineWidth(0.5);
+    doc.setDrawColor(16, 185, 129);
+    doc.setLineWidth(0.7);
     doc.line(20, 45, 190, 45);
     
     return 50; // Return Y position after header
@@ -212,7 +280,7 @@ const useReportExport = (): UseReportExport => {
         textColor: [40, 40, 40]
       },
       headStyles: { 
-        fillColor: [59, 130, 246],
+        fillColor: [16, 185, 129],
         textColor: 255,
         fontSize: 9,
         cellPadding: 4,
@@ -270,7 +338,7 @@ const useReportExport = (): UseReportExport => {
         textColor: [40, 40, 40]
       },
       headStyles: { 
-        fillColor: [59, 130, 246],
+        fillColor: [16, 185, 129],
         textColor: 255,
         fontSize: 9,
         cellPadding: 4,
@@ -337,7 +405,7 @@ const useReportExport = (): UseReportExport => {
         textColor: [40, 40, 40]
       },
       headStyles: { 
-        fillColor: [239, 68, 68],
+        fillColor: [16, 185, 129],
         textColor: 255,
         fontSize: 9,
         cellPadding: 4,
@@ -372,131 +440,110 @@ const useReportExport = (): UseReportExport => {
   ): Promise<void> => {
     setIsExporting(true);
     try {
-      const workbook = XLSX.utils.book_new();
+      const workbook = new ExcelJS.Workbook();
+      workbook.creator = 'SIM-Inventaris';
+      workbook.created = new Date();
       
       // Tambahkan worksheet ringkasan
       if (reportType === 'overview' || reportType === 'all') {
-        // Define summary data with proper type
-        const summaryData: (string | number | (string | number)[])[] = [
-          ['Laporan Inventaris Sekolah'],
-          [`Periode: ${period}`],
-          [`Tanggal: ${new Date().toLocaleDateString('id-ID')}`],
-          [],
-          ['RINGKASAN STATISTIK'],
-          ['Kategori', 'Jumlah'],
-          ['Total Inventaris', _stats.total_inventaris],
-          ['Total Obat-obatan', _stats.total_obat],
-          ['Barang Rusak', _stats.damaged_items_count],
-          ['Stok Obat Menipis', _stats.low_stock_count],
-          [],
-          ['DISTRIBUSI KATEGORI'],
-          ['Kategori', 'Jumlah'],
-          ...Object.entries(_stats.kategori_inventaris || {}).map(([kategori, jumlah]) => [kategori, jumlah] as [string, number]),
-          [],
-          ['DISTRIBUSI LOKASI'],
-          ['Lokasi', 'Jumlah'],
-          ...Object.entries(_stats.lokasi_distribution || {}).map(([lokasi, jumlah]) => [displayLokasi(lokasi), jumlah] as [string, number])
-        ];
-        
-        const wsSummary = XLSX.utils.aoa_to_sheet(summaryData as any[][]);
-        XLSX.utils.book_append_sheet(workbook, wsSummary, 'Ringkasan');
-      }
-      
-
-      // Tambahkan worksheet obat jika diperlukan
-      if (reportType === 'medicine' || reportType === 'all') {
-        const sortedObat = getSortedObat(data.obat);
-        const obatData: (string | number | boolean | (string | number | boolean)[])[] = [
-          ['Nama Obat', 'Stok', 'Satuan', 'Lokasi', 'Batas Minimal', 'Status', 'Terakhir Diperbarui'] as string[],
-          ...sortedObat.map(obat => [
-            obat.nama_obat,
-            obat.jumlah,
-            (obat as ExtendedObat).satuan || '-',
-            displayLokasi(obat.lokasi),
-            obat.batas_minimal,
-            obat.jumlah <= (obat.batas_minimal || 0) ? 'Stok Menipis' : 'Stok Aman',
-            formatTanggalInput(obat)
-          ] as (string | number | boolean)[])
-        ];
-        
-        const wsObat = XLSX.utils.aoa_to_sheet(obatData as any[][]);
-        XLSX.utils.book_append_sheet(workbook, wsObat, 'Data Obat');
-      }
-
-      // Tambahkan worksheet inventaris jika diperlukan
-      if (reportType === 'inventory' || reportType === 'all') {
-        const inventarisData: (string | number | (string | number)[])[] = [
-          ['Nama Barang', 'Kategori', 'Jumlah', 'Lokasi', 'Kondisi', 'Keterangan', 'Tanggal Input'] as string[],
-          ...data.inventaris.map(item => [
-            item.nama_barang,
-            item.kategori,
-            item.jumlah,
-            displayLokasi(item.lokasi as string),
-            item.kondisi,
-            item.keterangan || '-',
-            formatTanggalInput(item)
-          ] as (string | number)[])
-        ];
-        
-        const wsInventaris = XLSX.utils.aoa_to_sheet(inventarisData as any[][]);
-        XLSX.utils.book_append_sheet(workbook, wsInventaris, 'Data Inventaris');
-      }
-      
-
-      // Export data obat jika diperlukan
-      if (reportType === 'medicine' || reportType === 'overview' || reportType === 'all') {
-        // Urutkan data obat sebelum di-export
-        const sortedObat = getSortedObat(data.obat);
-        // Medicine sheet
-        const medicineData = sortedObat.map(item => {
-          const isExpired = item.tanggal_kadaluarsa && new Date(item.tanggal_kadaluarsa) < new Date();
-          const isExpiringSoon = item.tanggal_kadaluarsa && new Date(item.tanggal_kadaluarsa) <= new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-          
-          let status = item.jumlah <= item.batas_minimal ? 'Stok Menipis' : 'Stok Aman';
-          if (isExpired) status += ', Kadaluarsa';
-          else if (isExpiringSoon) status += ', Akan Kadaluarsa';
-          
-          return {
-            'Nama Obat': item.nama_obat,
-            'Stok': item.jumlah,
-            'Satuan': (item as any).satuan || '',
-            'Lokasi': displayLokasi(item.lokasi as any),
-            'Batas Minimal': item.batas_minimal,
-            'Tanggal Kadaluarsa': item.tanggal_kadaluarsa ? new Date(item.tanggal_kadaluarsa).toLocaleDateString('id-ID') : '',
-            'Status': status,
-            'Tanggal Input': formatTanggalInput(item),
-            'Keterangan': item.keterangan || ''
-          };
+        const summarySheet = workbook.addWorksheet('Ringkasan', {
+          pageSetup: { orientation: 'portrait', fitToPage: true, fitToWidth: 1 },
         });
-        
-        const medicineSheet = XLSX.utils.json_to_sheet(medicineData);
-        XLSX.utils.book_append_sheet(workbook, medicineSheet, 'Obat-obatan');
+        const tRow = summarySheet.addRow(['Laporan Inventaris Sekolah']);
+        tRow.font = { size: 16, bold: true };
+        tRow.alignment = { horizontal: 'center' };
+        summarySheet.mergeCells(1, 1, 1, 2);
+        summarySheet.addRow([`Periode: ${period}`]);
+        summarySheet.addRow([`Tanggal: ${new Date().toLocaleDateString('id-ID')}`]);
+        summarySheet.addRow([]);
+        // Kategori ringkasan
+        summarySheet.addRow(['RINGKASAN STATISTIK']);
+        summarySheet.addRow(['Kategori', 'Jumlah']);
+        summarySheet.addRow(['Total Inventaris', _stats.total_inventaris]);
+        summarySheet.addRow(['Total Obat-obatan', _stats.total_obat]);
+        summarySheet.addRow(['Barang Rusak', _stats.damaged_items_count]);
+        summarySheet.addRow(['Stok Obat Menipis', _stats.low_stock_count]);
+        summarySheet.addRow([]);
+        summarySheet.addRow(['DISTRIBUSI KATEGORI']);
+        summarySheet.addRow(['Kategori', 'Jumlah']);
+        Object.entries(_stats.kategori_inventaris || {}).forEach(([kategori, jumlah]) => {
+          summarySheet.addRow([kategori, jumlah as number]);
+        });
+        summarySheet.addRow([]);
+        summarySheet.addRow(['DISTRIBUSI LOKASI']);
+        summarySheet.addRow(['Lokasi', 'Jumlah']);
+        Object.entries(_stats.lokasi_distribution || {}).forEach(([lokasi, jumlah]) => {
+          summarySheet.addRow([displayLokasi(lokasi), jumlah as number]);
+        });
+        summarySheet.columns = [{ width: 30 }, { width: 20 }];
       }
       
-      // Tambahkan worksheet kondisi barang jika diperlukan
+
+      // Tambahkan worksheet obat jika diperlukan (dengan template dan header berwarna)
+      if (reportType === 'medicine' || reportType === 'overview' || reportType === 'all') {
+        const sortedObat = getSortedObat(data.obat);
+        const headers = ['Nama Obat', 'Stok', 'Satuan', 'Lokasi', 'Batas Minimal', 'Status', 'Terakhir Diperbarui'];
+        const rows = sortedObat.map((obat) => [
+          obat.nama_obat,
+          obat.jumlah,
+          (obat as ExtendedObat).satuan || '-',
+          displayLokasi(obat.lokasi),
+          obat.batas_minimal,
+          obat.jumlah <= (obat.batas_minimal || 0) ? 'Stok Menipis' : 'Stok Aman',
+          formatTanggalInput(obat),
+        ] as (string | number | boolean | null)[]);
+
+        createStyledSheet(workbook, 'Data Obat', 'Laporan Obat-obatan', period, headers, rows, 'FF10B981');
+      }
+
+      // Tambahkan worksheet inventaris jika diperlukan (dengan template dan header berwarna)
+      if (reportType === 'inventory' || reportType === 'all') {
+        const headers = ['Nama Barang', 'Kategori', 'Jumlah', 'Lokasi', 'Kondisi', 'Keterangan', 'Tanggal Input'];
+        const rows = data.inventaris.map((item) => [
+          item.nama_barang,
+          item.kategori,
+          item.jumlah,
+          displayLokasi(item.lokasi as string),
+          item.kondisi,
+          item.keterangan || '-',
+          formatTanggalInput(item),
+        ] as (string | number | boolean | null)[]);
+
+        createStyledSheet(workbook, 'Data Inventaris', 'Data Inventaris', period, headers, rows, 'FF10B981');
+      }
+      
+
+      // Export data obat untuk overview/all juga sudah tercakup pada sheet "Data Obat" di atas.
+      
+      // Tambahkan worksheet kondisi barang jika diperlukan (dengan template dan header berwarna)
       if (reportType === 'condition' || reportType === 'all') {
-        const conditionData: (string | number | (string | number)[])[] = [
-          ['Nama Barang', 'Kategori', 'Kondisi', 'Jumlah', 'Lokasi', 'Keterangan', 'Terakhir Diperbarui'] as string[],
-          ...data.inventaris
-            .filter(item => item.kondisi !== 'Baik')
-            .map(item => [
-              item.nama_barang,
-              item.kategori,
-              item.kondisi,
-              item.jumlah,
-              displayLokasi(item.lokasi as string),
-              item.keterangan || '-',
-              formatTanggalInput(item)
-            ] as (string | number)[])
-        ];
-        
-        const wsCondition = XLSX.utils.aoa_to_sheet(conditionData as any[][]);
-        XLSX.utils.book_append_sheet(workbook, wsCondition, 'Kondisi Barang');
+        const headers = ['Nama Barang', 'Kategori', 'Kondisi', 'Jumlah', 'Lokasi', 'Keterangan', 'Terakhir Diperbarui'];
+        const filtered = data.inventaris.filter((item) => item.kondisi !== 'Baik');
+        const rows = filtered.map((item) => [
+          item.nama_barang,
+          item.kategori,
+          item.kondisi,
+          item.jumlah,
+          displayLokasi(item.lokasi as string),
+          item.keterangan || '-',
+          formatTanggalInput(item),
+        ] as (string | number | boolean | null)[]);
+
+        createStyledSheet(workbook, 'Kondisi Barang', 'Barang yang Perlu Perhatian', period, headers, rows, 'FF10B981');
       }
       
-      // Generate nama file dengan format yang benar
+      // Generate nama file dan simpan (browser download)
       const fileName = `laporan-${reportType}-${new Date().toISOString().split('T')[0]}.xlsx`;
-      XLSX.writeFile(workbook, fileName);
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Error exporting to Excel:', error);
       console.error('Error generating Excel:', error);

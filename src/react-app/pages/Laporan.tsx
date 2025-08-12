@@ -193,7 +193,7 @@ export default function LaporanPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
       </div>
     );
   }
@@ -222,7 +222,7 @@ export default function LaporanPage() {
     value: jumlah
   }));
 
-  const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
+  const colors = ['#10B981', '#F59E0B', '#34D399', '#FCD34D', '#065F46'];
 
   // Data terfilter berdasarkan lokasi (untuk tab)
   const filteredInventaris = (data?.inventaris || []).filter((item) => !filterLokasiInventory || item.lokasi === filterLokasiInventory);
@@ -242,7 +242,7 @@ export default function LaporanPage() {
           <select
             value={selectedPeriod}
             onChange={(e) => setSelectedPeriod(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
           >
             <option value="this_week">Minggu Ini</option>
             <option value="this_month">Bulan Ini</option>
@@ -252,7 +252,7 @@ export default function LaporanPage() {
           <button
             onClick={generatePDFReport}
             disabled={isExporting}
-            className="flex items-center space-x-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center space-x-2 bg-accent-600 text-white px-4 py-2 rounded-lg hover:bg-accent-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <FileText className="w-4 h-4" />
             <span>{isExporting ? 'Memproses...' : 'Export PDF'}</span>
@@ -260,7 +260,7 @@ export default function LaporanPage() {
           <button
             onClick={generateExcelReport}
             disabled={isExporting}
-            className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center space-x-2 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <FileSpreadsheet className="w-4 h-4" />
             <span>{isExporting ? 'Memproses...' : 'Export Excel'}</span>
@@ -275,7 +275,7 @@ export default function LaporanPage() {
             onClick={() => setSelectedReport('overview')}
             className={`flex items-center space-x-2 px-4 py-2 rounded-lg whitespace-nowrap transition-colors ${
               selectedReport === 'overview' 
-                ? 'bg-blue-100 text-blue-700 border border-blue-200' 
+                ? 'bg-primary-100 text-primary-700 border border-primary-200' 
                 : 'text-gray-600 hover:bg-gray-100'
             }`}
           >
@@ -286,7 +286,7 @@ export default function LaporanPage() {
             onClick={() => setSelectedReport('inventory')}
             className={`flex items-center space-x-2 px-4 py-2 rounded-lg whitespace-nowrap transition-colors ${
               selectedReport === 'inventory' 
-                ? 'bg-blue-100 text-blue-700 border border-blue-200' 
+                ? 'bg-primary-100 text-primary-700 border border-primary-200' 
                 : 'text-gray-600 hover:bg-gray-100'
             }`}
           >
@@ -297,7 +297,7 @@ export default function LaporanPage() {
             onClick={() => setSelectedReport('medicine')}
             className={`flex items-center space-x-2 px-4 py-2 rounded-lg whitespace-nowrap transition-colors ${
               selectedReport === 'medicine' 
-                ? 'bg-blue-100 text-blue-700 border border-blue-200' 
+                ? 'bg-primary-100 text-primary-700 border border-primary-200' 
                 : 'text-gray-600 hover:bg-gray-100'
             }`}
           >
@@ -308,7 +308,7 @@ export default function LaporanPage() {
             onClick={() => setSelectedReport('condition')}
             className={`flex items-center space-x-2 px-4 py-2 rounded-lg whitespace-nowrap transition-colors ${
               selectedReport === 'condition' 
-                ? 'bg-blue-100 text-blue-700 border border-blue-200' 
+                ? 'bg-primary-100 text-primary-700 border border-primary-200' 
                 : 'text-gray-600 hover:bg-gray-100'
             }`}
           >
@@ -331,7 +331,7 @@ export default function LaporanPage() {
                     {data.statistik.total_inventaris.toLocaleString()}
                   </p>
                 </div>
-                <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
+                <div className="w-12 h-12 bg-primary-500 rounded-lg flex items-center justify-center">
                   <Package className="w-6 h-6 text-white" />
                 </div>
               </div>
@@ -345,7 +345,7 @@ export default function LaporanPage() {
                     {data.statistik.total_obat.toLocaleString()}
                   </p>
                 </div>
-                <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
+                <div className="w-12 h-12 bg-primary-500 rounded-lg flex items-center justify-center">
                   <Pill className="w-6 h-6 text-white" />
                 </div>
               </div>

@@ -30,16 +30,16 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-primary-600 via-primary-700 to-primary-800 flex items-center justify-center p-4">
       <div className="max-w-md w-full space-y-8">
         {/* Header */}
         <div className="text-center">
           <div className="mx-auto w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-lg mb-6">
-            <School className="w-10 h-10 text-blue-600" />
+            <School className="w-10 h-10 text-primary-600" />
           </div>
           <h1 className="text-3xl font-bold text-white mb-2">SIM Inventaris</h1>
-          <p className="text-blue-100">Sekolah Imam Nawawi</p>
-          <p className="text-blue-200 text-sm mt-2">Sistem Informasi Manajemen Inventaris</p>
+          <p className="text-primary-100">Sekolah Imam Nawawi</p>
+          <p className="text-primary-100/80 text-sm mt-2">Sistem Informasi Manajemen Inventaris</p>
         </div>
 
         {/* Login Form */}
@@ -54,7 +54,7 @@ export default function Login() {
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
                 placeholder="Masukkan username"
                 required
               />
@@ -70,7 +70,7 @@ export default function Login() {
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors pr-12"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors pr-12"
                   placeholder="Masukkan password"
                   required
                 />
@@ -93,21 +93,13 @@ export default function Login() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 px-4 rounded-lg font-medium hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+              className="w-full bg-gradient-to-r from-primary-600 to-primary-700 text-white py-3 px-4 rounded-lg font-medium hover:from-primary-700 hover:to-primary-800 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
             >
               {isLoading ? 'Masuk...' : 'Masuk'}
             </button>
           </form>
 
-          <div className="mt-6 pt-6 border-t border-gray-200">
-            <div className="text-sm text-gray-600">
-              <p className="font-medium mb-2">Akun Demo:</p>
-              <div className="space-y-1 text-xs">
-                <p>• Username: <span className="font-mono bg-gray-100 px-1 rounded">admin</span></p>
-                <p>• Password: <span className="font-mono bg-gray-100 px-1 rounded">password123</span></p>
-              </div>
-            </div>
-          </div>
+          
         </div>
       </div>
     </div>

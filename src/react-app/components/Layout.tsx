@@ -45,7 +45,7 @@ export default function Layout({ children }: LayoutProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-accent-50">
       {/* Mobile sidebar overlay */}
       {isSidebarOpen && (
         <div 
@@ -63,7 +63,7 @@ export default function Layout({ children }: LayoutProps) {
           {/* Header */}
           <div className="p-6 border-b border-gray-200">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+              <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-lg flex items-center justify-center shadow-sm">
                 <School className="w-6 h-6 text-white" />
               </div>
               <div>
@@ -76,7 +76,7 @@ export default function Layout({ children }: LayoutProps) {
           {/* User info */}
           <div className="p-4 border-b border-gray-200">
             <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-gradient-to-br from-green-400 to-green-500 rounded-full flex items-center justify-center">
+              <div className="w-8 h-8 bg-gradient-to-br from-primary-400 to-primary-500 rounded-full flex items-center justify-center">
                 <span className="text-white text-sm font-medium">
                   {user.full_name?.charAt(0) || user.username.charAt(0).toUpperCase()}
                 </span>
@@ -101,8 +101,8 @@ export default function Layout({ children }: LayoutProps) {
                       className={`
                         flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors
                         ${isActive 
-                          ? 'bg-blue-50 text-blue-700 border border-blue-200' 
-                          : 'text-gray-700 hover:bg-gray-100'
+                          ? 'bg-primary-50 text-primary-700 border border-primary-200' 
+                          : 'text-gray-700 hover:bg-accent-50'
                         }
                       `}
                       onClick={() => setIsSidebarOpen(false)}

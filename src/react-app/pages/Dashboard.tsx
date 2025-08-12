@@ -71,7 +71,7 @@ export default function Dashboard() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
       </div>
     );
   }
@@ -97,16 +97,16 @@ export default function Dashboard() {
     value: stat.value
   }));
 
-  const pieColors = ['#3B82F6', '#10B981', '#8B5CF6', '#F59E0B', '#EF4444'];
+  const pieColors = ['#10B981', '#F59E0B', '#34D399', '#FCD34D', '#065F46'];
 
   return (
     <div className="space-y-6">
       {/* Welcome Section */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-2xl p-6 text-white">
+      <div className="bg-gradient-to-r from-primary-600 to-primary-700 rounded-2xl p-6 text-white">
         <h1 className="text-2xl font-bold mb-2">
           Selamat Datang, {user?.full_name || user?.username}!
         </h1>
-        <p className="text-blue-100">
+        <p className="text-primary-100">
           Kelola inventaris sekolah dengan mudah dan efisien
         </p>
       </div>
@@ -136,7 +136,7 @@ export default function Dashboard() {
         {/* Bar Chart */}
         <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
           <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <TrendingUp className="w-5 h-5 mr-2 text-blue-600" />
+            <TrendingUp className="w-5 h-5 mr-2 text-primary-600" />
             Statistik Inventaris
           </h3>
           <div className="h-64">
@@ -146,7 +146,7 @@ export default function Dashboard() {
                 <XAxis dataKey="name" tick={{ fontSize: 12 }} />
                 <YAxis />
                 <Tooltip />
-                <Bar dataKey="value" fill="#3B82F6" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="value" fill="#10B981" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
