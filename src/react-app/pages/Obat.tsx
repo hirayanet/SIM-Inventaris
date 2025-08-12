@@ -49,7 +49,7 @@ export default function ObatPage() {
     lokasi: getUserDefaultLocation(),
     satuan: 'pcs',
     tanggal_kadaluarsa: '',
-    batas_minimal: 5,
+    batas_minimal: 1,
     keterangan: ''
   });
 
